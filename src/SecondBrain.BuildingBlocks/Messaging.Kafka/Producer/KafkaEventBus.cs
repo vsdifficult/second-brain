@@ -54,20 +54,23 @@ public class KafkaEventBus : IEventBus, IDisposable
             .Build();
     }
 
-    public async Task PublishAsync<T>(
-        string topic, 
-        string key, 
-        T @event, 
-        CancellationToken cancellationToken = default) 
-        where T : Event
+    Task IEventBus.PublishAsync<T>(string topic, string key, T @event, CancellationToken cancellationToken) where T : class
+    {
+        var jsonValue = JsonSerializer.Serialize(@event, _jsonOptions);
+        var typeName = typeof(T).Name;
+        return PublishInternalAsync(topic, key ?? Guid.NewGuid().ToString(), jsonValue, typeName, cancellationToken);
+    }
+
+    public Task PublishRawAsync(string topic, string key, string payload, string? messageType = null, CancellationToken cancellationToken = default)
+        => PublishInternalAsync(topic, key, payload, messageType ?? "unknown", cancellationToken);
+
+    private async Task PublishInternalAsync(string topic, string key, string jsonValue, string typeName, CancellationToken cancellationToken)
     {
         try
         {
-            var jsonValue = JsonSerializer.Serialize(@event, _jsonOptions);
-
             var kafkaMessage = new Message<string, string>
             {
-                Key = key ?? @event.Id.ToString(),
+                Key = key,
                 Value = jsonValue,
                 Headers = new Headers()
             };
@@ -89,7 +92,7 @@ public class KafkaEventBus : IEventBus, IDisposable
             }
 
             kafkaMessage.Headers.Add("message-type", 
-                Encoding.UTF8.GetBytes(typeof(T).Name));
+                Encoding.UTF8.GetBytes(typeName));
             kafkaMessage.Headers.Add("message-version", 
                 Encoding.UTF8.GetBytes("1.0"));
             kafkaMessage.Headers.Add("sent-at", 
@@ -103,7 +106,7 @@ public class KafkaEventBus : IEventBus, IDisposable
             
             _logger.LogInformation(
                 "Event {EventType} published to {Topic} with offset {Offset} in {ElapsedMs}ms",
-                typeof(T).Name,
+                typeName,
                 topic,
                 deliveryResult.Offset,
                 stopwatch.ElapsedMilliseconds);
@@ -112,21 +115,21 @@ public class KafkaEventBus : IEventBus, IDisposable
         {
             _logger.LogError(ex, 
                 "Failed to publish event {EventType} to {Topic}. Error: {Reason}", 
-                typeof(T).Name, 
+                typeName, 
                 topic, 
                 ex.Error.Reason);
             throw;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Publishing event {EventType} was cancelled", typeof(T).Name);
+            _logger.LogWarning("Publishing event {EventType} was cancelled", typeName);
             throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, 
                 "Unexpected error while publishing event {EventType} to {Topic}", 
-                typeof(T).Name, 
+                typeName, 
                 topic);
             throw;
         }
