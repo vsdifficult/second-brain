@@ -1,34 +1,31 @@
+// src/SecondBrain.BuildingBlocks/Core/Repositories/GenericRepository.cs
 using Microsoft.EntityFrameworkCore;
 using SecondBrain.BuildingBlocks.Core.Entities;
+using SecondBrain.BuildingBlocks.EFCore;
+using SecondBrain.BuildingBlocks.Messaging.Kafka.Abstractions;
 using System.Linq.Expressions;
 
 namespace SecondBrain.BuildingBlocks.Core.Repositories;
 
 public class GenericRepository<T, TId> : IRepository<T, TId> where T : BaseEntity
 {
-    protected readonly DbContext _context;
+    protected readonly BaseBbContext _context;
     protected readonly DbSet<T> _dbSet;
 
-    public GenericRepository(DbContext context)
+    public GenericRepository(BaseBbContext context)
     {
         _context = context;
         _dbSet = context.Set<T>();
     }
 
     public virtual async Task<T?> GetByIdAsync(TId id, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
-    }
+        => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
 
     public virtual async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.ToListAsync(cancellationToken);
-    }
+        => await _dbSet.ToListAsync(cancellationToken);
 
     public virtual async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
-    }
+        => await _dbSet.Where(predicate).ToListAsync(cancellationToken);
 
     public virtual async Task<T> CreateAsync(T entity, CancellationToken cancellationToken = default)
     {
@@ -46,18 +43,16 @@ public class GenericRepository<T, TId> : IRepository<T, TId> where T : BaseEntit
     {
         var entity = await GetByIdAsync(id, cancellationToken);
         if (entity != null)
-        {
             _dbSet.Remove(entity);
-        }
     }
 
     public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet.AnyAsync(predicate, cancellationToken);
-    }
+        => await _dbSet.AnyAsync(predicate, cancellationToken);
 
     public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return await _context.SaveChangesAsync(cancellationToken);
-    }
+        => await _context.SaveChangesAsync(cancellationToken);
+
+    public virtual void EnqueueOutboxMessage<TEvent>(string topic, string key, TEvent @event)
+        where TEvent : Event
+        => _context.EnqueueOutboxMessage(topic, key, @event);
 }

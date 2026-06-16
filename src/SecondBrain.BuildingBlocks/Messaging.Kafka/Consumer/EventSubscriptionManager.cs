@@ -6,13 +6,20 @@ public class EventSubscriptionManager
 {
     private readonly Dictionary<string, Type> _handlers = new();
 
-    public void AddSubscription<TEvent, THandler>(string topic)
-        where TEvent : Event
+    public void AddSubscription<TEvent, THandler>(string topic) 
+        where TEvent : Event 
         where THandler : IIntegrationEventHandler<TEvent>
     {
         _handlers[topic] = typeof(THandler);
     }
 
-    public Type? GetHandlerTypeForTopic(string topic) => _handlers.GetValueOrDefault(topic);
-    public IEnumerable<string> GetTopics() => _handlers.Keys;
+    public Type? GetHandlerTypeForTopic(string topic)
+    {
+        return _handlers.TryGetValue(topic, out var handlerType) ? handlerType : null;
+    }
+
+    public IEnumerable<string> GetTopics()
+    {
+        return _handlers.Keys;
+    }
 }

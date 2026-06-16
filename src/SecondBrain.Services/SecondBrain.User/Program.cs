@@ -8,6 +8,7 @@ using SecondBrain.Services.UserService.Models;
 using SecondBrain.Services.UserService.Services.Interfaces;
 using SecondBrain.Services.UserService.Services.Implementations;
 using SecondBrain.BuildingBlocks.Core.Repositories;
+using SecondBrain.BuildingBlocks.EFCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,7 @@ var configuration = builder.Configuration;
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<UserDbContext>());
+builder.Services.AddScoped<BaseBbContext>(sp => sp.GetRequiredService<UserDbContext>());
 
 builder.Services.AddScoped<IRepository<UserEntity, Guid>, GenericRepository<UserEntity, Guid>>();
 
