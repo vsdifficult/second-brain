@@ -1,0 +1,6 @@
+@SecondBrain.Gateway_HostAddress = http://localhost:5191
+
+GET {{SecondBrain.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
