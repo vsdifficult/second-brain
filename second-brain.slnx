@@ -7,4 +7,7 @@
     <Project Path="src/SecondBrain.Services/SecondBrain.Brain/SecondBrain.Brain.csproj" />
     <Project Path="src/SecondBrain.Services/SecondBrain.User/SecondBrain.User.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SecondBrain.User.Tests/SecondBrain.User.Tests.csproj" />
+  </Folder>
 </Solution>
