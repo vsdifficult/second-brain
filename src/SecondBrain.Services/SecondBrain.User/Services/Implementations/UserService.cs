@@ -1,9 +1,9 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using BCrypt.Net;
 using SecondBrain.Services.UserService.Entites; 
 using SecondBrain.BuildingBlocks.Core.Repositories;
 using SecondBrain.Services.UserService.Services.Interfaces;
@@ -26,9 +26,6 @@ public class UserService : IUserService
     
     public async Task<UserEntity> RegisterAsync(RegisterRequestDto dto, CancellationToken ct = default)
     {
-        if (await _userRepository.ExistsAsync(u => u.Email == dto.Email, ct))
-            throw new InvalidOperationException("User with this email already exists");
-            
         if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
             throw new InvalidOperationException("Password must be at least 6 characters long");
 
@@ -52,7 +49,7 @@ public class UserService : IUserService
             PasswordHash = HashPassword(dto.Password),
             IsActive = true,
             CreatedAt = DateTime.UtcNow, 
-            UpdateAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow
         };
         
         await _userRepository.CreateAsync(user, ct);
@@ -61,10 +58,10 @@ public class UserService : IUserService
         return user;
     }
     
-    public async Task<string> LoginAsync(LoginRequestDto dto,  CancellationToken ct = default)
+    public async Task<string> LoginAsync(LoginRequestDto dto, CancellationToken ct = default)
     {
-        var user = await _userRepository.FindAsync(u => u.Email == dto.Email, ct);
-        var userEntity = user.FirstOrDefault();
+        var users = await _userRepository.FindAsync(u => u.Email == dto.Email, ct);
+        var userEntity = users.FirstOrDefault();
         
         if (userEntity == null || !VerifyPassword(dto.Password, userEntity.PasswordHash))
             throw new UnauthorizedAccessException("Invalid credentials");
@@ -104,15 +101,12 @@ public class UserService : IUserService
     
     private string HashPassword(string password)
     {
-        using var sha = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(password);
-        var hash = sha.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
+        return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
     }
     
     private bool VerifyPassword(string password, string hash)
     {
-        return HashPassword(password) == hash;
+        return BCrypt.Net.BCrypt.Verify(password, hash);
     }
     
     private string GenerateJwtToken(UserEntity user)
