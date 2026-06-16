@@ -6,7 +6,7 @@ using SecondBrain.BuildingBlocks.Messaging.Kafka.Abstractions;
 
 namespace SecondBrain.BuildingBlocks.EFCore.Outbox;
 
-public class OutboxPublisherHostedService<TContext> : BackgroundService where TContext : BaseBbContext
+public class OutboxPublisherHostedService<TContext> : BackgroundService where TContext : BaseDbContext
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IEventBus _eventBus;
@@ -76,6 +76,6 @@ public class OutboxPublisherHostedService<TContext> : BackgroundService where TC
 public static class OutboxServiceCollectionExtensions
 {
     public static IServiceCollection AddOutboxPublisher<TContext>(this IServiceCollection services)
-        where TContext : BaseBbContext
+        where TContext : BaseDbContext
         => services.AddHostedService<OutboxPublisherHostedService<TContext>>();
 }

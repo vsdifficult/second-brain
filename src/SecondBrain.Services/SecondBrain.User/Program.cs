@@ -17,7 +17,7 @@ var configuration = builder.Configuration;
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<BaseBbContext>(sp => sp.GetRequiredService<UserDbContext>());
+builder.Services.AddScoped<BaseDbContext>(sp => sp.GetRequiredService<UserDbContext>());
 
 builder.Services.AddScoped<IRepository<UserEntity, Guid>, GenericRepository<UserEntity, Guid>>();
 

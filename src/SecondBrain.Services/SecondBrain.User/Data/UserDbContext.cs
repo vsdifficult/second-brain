@@ -5,7 +5,7 @@ using SecondBrain.Services.UserService.Entites;
 
 namespace SecondBrain.Services.UserService.Data; 
 
-public class UserDbContext: BaseBbContext
+public class UserDbContext: BaseDbContext
 {
     public DbSet<UserEntity> Users {get; set; }
     public UserDbContext(DbContextOptions<UserDbContext> options) : base(options) {}
