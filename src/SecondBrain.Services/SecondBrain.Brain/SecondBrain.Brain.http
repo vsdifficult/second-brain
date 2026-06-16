@@ -1,0 +1,6 @@
+@SecondBrain.Brain_HostAddress = http://localhost:5188
+
+GET {{SecondBrain.Brain_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
