@@ -8,7 +8,7 @@ namespace SecondBrain.Services.UserService.Data;
 public class UserDbContext: BaseBbContext
 {
     public DbSet<UserEntity> Users {get; set; }
-    public UserDbContext(DbContextOptions options) : base(options) {}
+    public UserDbContext(DbContextOptions<UserDbContext> options) : base(options) {}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
