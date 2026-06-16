@@ -106,9 +106,16 @@ public class UserService : IUserService
     
     private bool VerifyPassword(string password, string hash)
     {
-        return BCrypt.Net.BCrypt.Verify(password, hash);
+        // BCrypt hashes always start with $2
+        if (hash.StartsWith("$2"))
+            return BCrypt.Net.BCrypt.Verify(password, hash);
+
+        // legacy SHA256 fallback — remove once all users have migrated
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = Encoding.UTF8.GetBytes(password);
+        var legacyHash = Convert.ToBase64String(sha.ComputeHash(bytes));
+        return legacyHash == hash;
     }
-    
     private string GenerateJwtToken(UserEntity user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();

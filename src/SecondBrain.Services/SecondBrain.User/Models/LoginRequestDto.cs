@@ -1,8 +1,13 @@
-namespace SecondBrain.Services.UserService.Models; 
+using System.ComponentModel.DataAnnotations;
+
+namespace SecondBrain.Services.UserService.Models;
 
 public record LoginRequestDto
 {
-    public string Password {get; init;}
+    [Required]
+    public string Password { get; init; } = string.Empty;
 
-    public string Email {get; init; }
+    [Required]
+    [EmailAddress]
+    public string Email { get; init; } = string.Empty;
 }
