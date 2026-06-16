@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SecondBrain.BuildingBlocks/SecondBrain.BuildingBlocks.csproj" />
+    <Project Path="src/SecondBrain.Gateway/SecondBrain.Gateway.csproj" />
+  </Folder>
+  <Folder Name="/src/SecondBrain.Services/">
+    <Project Path="src/SecondBrain.Services/SecondBrain.Brain/SecondBrain.Brain.csproj" />
+    <Project Path="src/SecondBrain.Services/SecondBrain.User/SecondBrain.User.csproj" />
+  </Folder>
+</Solution>
