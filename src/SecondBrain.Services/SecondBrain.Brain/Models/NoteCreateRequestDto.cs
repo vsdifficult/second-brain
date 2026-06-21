@@ -6,4 +6,6 @@ public record NoteCreateRequestDto
     public required string Body { get; set; }
 
     public Guid? NotebookId { get; set; }
+
+    public Guid OwnerId {get; set; }
 }
