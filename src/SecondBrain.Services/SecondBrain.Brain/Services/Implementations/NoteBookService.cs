@@ -3,19 +3,23 @@ using SecondBrain.BuildingBlocks.Core.Repositories;
 using SecondBrain.Services.BrainService.Entities;
 using SecondBrain.Services.BrainService.Models;
 using SecondBrain.Services.BrainService.Services.Interfaces;
+using SecondBrain.Services.BrainService.Data.Repositories; 
 
 namespace SecondBrain.Services.BrainService.Services.Implementations;
 
 public class NoteBookService : INoteBookService
 {   
-    private readonly IRepository<NoteBookEntity, Guid> _notebookrepository; 
+    private readonly INoteBookRepository _notebookrepository; 
+    private readonly INoteRepository _noterepository; 
     private readonly ILogger<NoteBookService> _logger; 
     public NoteBookService(
-        IRepository<NoteBookEntity, Guid> notebookrepository,
+        INoteBookRepository notebookrepository,
+        INoteRepository noterepository,
         ILogger<NoteBookService> logger
     )
     {
         _notebookrepository = notebookrepository; 
+        _noterepository = noterepository;
         _logger = logger; 
     }
 
@@ -68,6 +72,15 @@ public class NoteBookService : INoteBookService
 
     public async Task<bool> AddNoteAsync(Guid NoteId, CancellationToken ct)
     {
-        throw new NotImplementedException(); 
+        var note = await _noterepository.GetByIdAsync(NoteId, ct); 
+        if (note == null)
+            throw new Exception($"Note with id: {NoteId} not found"); 
+
+        if (note.NotebookId == null)
+            throw new Exception($"Note with id: {NoteId} is not associated with any notebook");
+
+        var notebookId = note.NotebookId.Value; 
+        var result = await _notebookrepository.AddNoteAsync(notebookId, note, ct); 
+        return result;
     }
 }
