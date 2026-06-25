@@ -9,10 +9,10 @@ namespace SecondBrain.BuildingBlocks.Core.Repositories;
 
 public class GenericRepository<T, TId> : IRepository<T, TId> where T : BaseEntity
 {
-    protected readonly BaseBbContext _context;
+    protected readonly BaseDbContext _context;
     protected readonly DbSet<T> _dbSet;
 
-    public GenericRepository(BaseBbContext context)
+    public GenericRepository(BaseDbContext context)
     {
         _context = context;
         _dbSet = context.Set<T>();

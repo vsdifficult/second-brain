@@ -7,9 +7,9 @@ using SecondBrain.BuildingBlocks.Messaging.Kafka.Abstractions;
 
 namespace SecondBrain.BuildingBlocks.EFCore;
 
-public abstract class BaseBbContext : DbContext
+public abstract class BaseDbContext : DbContext
 {
-    protected BaseBbContext(DbContextOptions options) : base(options) { }
+    protected BaseDbContext(DbContextOptions options) : base(options) { }
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
