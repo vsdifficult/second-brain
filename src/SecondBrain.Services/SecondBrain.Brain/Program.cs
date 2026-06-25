@@ -1,35 +1,41 @@
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SecondBrain.Services.BrainService.Data;
-using SecondBrain.Services.BrainService.Entities; 
+using SecondBrain.Services.BrainService.Data.Repositories;
+using SecondBrain.Services.BrainService.Entities;
 using SecondBrain.Services.BrainService.Models;
 using SecondBrain.Services.BrainService.Services.Interfaces;
 using SecondBrain.Services.BrainService.Services.Implementations;
 using SecondBrain.BuildingBlocks.Core.Repositories;
-using SecondBrain.BuildingBlocks.EFCore; 
+using SecondBrain.BuildingBlocks.EFCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL; 
 
 var builder = WebApplication.CreateBuilder(args);
-
 var configuration = builder.Configuration;
 
 builder.Services.AddDbContext<BrainDbContext>(options =>
-    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<BaseDbContext>(sp => sp.GetRequiredService<BrainDbContext>());
 
+builder.Services.AddScoped<INoteRepository, NoteRepository>();
+builder.Services.AddScoped<INoteBookRepository, NoteBookRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
+
 builder.Services.AddScoped<IRepository<TagEntity, Guid>, GenericRepository<TagEntity, Guid>>();
-builder.Services.AddScoped<IRepository<NoteEntity, Guid>, GenericRepository<NoteEntity, Guid>>();
-builder.Services.AddScoped<IRepository<NoteBookEntity, Guid>, GenericRepository<NoteBookEntity, Guid>>();
 
 builder.Services.AddScoped<INoteService, NoteService>();
-builder.Services.AddScoped<INoteBookService, NoteBookService>(); 
+builder.Services.AddScoped<INoteBookService, NoteBookService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
-var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>();
-builder.Services.Configure<JwtSettings>(configuration.GetSection("Jwt")); 
-var key = Encoding.UTF8.GetBytes(jwtSettings?.Secret ?? "default-secret-key-12345678901234567890123456789012");
- 
+var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
+builder.Services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+
+var key = Encoding.UTF8.GetBytes(
+    jwtSettings?.Secret ?? throw new InvalidOperationException("JWT Secret is not configured"));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -38,30 +44,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
             ValidateIssuer = true,
-            ValidIssuer = jwtSettings?.Issuer,
+            ValidIssuer = jwtSettings.Issuer,
             ValidateAudience = true,
-            ValidAudience = jwtSettings?.Audience,
+            ValidAudience = jwtSettings.Audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
-    { 
-        Title = "SecondBrain.Brain API", 
-        Version = "v1" 
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "SecondBrain.Brain API",
+        Version = "v1"
     });
-    
+
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Description = "JWT Authorization header. Example: \"Bearer {token}\"",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
@@ -86,13 +91,8 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
+    options.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 var app = builder.Build();

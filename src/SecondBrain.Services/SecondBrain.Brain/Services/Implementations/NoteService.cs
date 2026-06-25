@@ -21,14 +21,14 @@ public class NoteService : INoteService
 
     public async Task<Guid> CreateNoteAsync(NoteCreateRequestDto dto, CancellationToken ct = default)
     {
-        if (dto.Title.IsNullOrEmpty())
-            throw new Exception("Title is Empty");
+        if (string.IsNullOrEmpty(dto.Title))
+            throw new ArgumentException("Title is empty", nameof(dto.Title));
 
-        if (dto.Body.IsNullOrEmpty())
-            throw new Exception("Title is Body");
+        if (string.IsNullOrEmpty(dto.Body))
+            throw new ArgumentException("Body is empty", nameof(dto.Body));
 
-        if (dto.OwnerId == null)
-            throw new Exception("Note isnt have owner"); 
+        if (dto.OwnerId == Guid.Empty)
+            throw new ArgumentException("Note must have an owner", nameof(dto.OwnerId));
 
         var note = new NoteEntity
         {
@@ -39,8 +39,9 @@ public class NoteService : INoteService
             Body = dto.Body,
             OwnerId = dto.OwnerId,
             NotebookId = dto.NotebookId
-        }; 
-        await _noteRepository.CreateAsync(note, ct); 
+        };
+
+        await _noteRepository.CreateAsync(note, ct);
         _logger.LogInformation("Note with id: {NoteId} created", note.Id);
         return note.Id;
     }
