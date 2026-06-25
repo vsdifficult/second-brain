@@ -17,6 +17,6 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-EXPOSE 8080
+EXPOSE 7002
 
 ENTRYPOINT ["dotnet", "SecondBrain.User.dll"]
