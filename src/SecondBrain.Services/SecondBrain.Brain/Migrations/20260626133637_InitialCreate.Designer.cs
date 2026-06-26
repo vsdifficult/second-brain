@@ -12,8 +12,8 @@ using SecondBrain.Services.BrainService.Data;
 namespace SecondBrain.Brain.Migrations
 {
     [DbContext(typeof(BrainDbContext))]
-    [Migration("20260625070407_IniticalCreate")]
-    partial class IniticalCreate
+    [Migration("20260626133637_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
