@@ -1,0 +1,78 @@
+
+services:
+  users-db:
+    image: postgres:16-alpine
+    container_name: second_brain_users_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrongPassword123!
+      - POSTGRES_DB=SecondBrainUsersDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d SecondBrainUsersDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  brain-db:
+    image: postgres:16-alpine
+    container_name: second_brain_brain_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrongPassword123!
+      - POSTGRES_DB=SecondBrainBrainDb
+    ports:
+      - "5433:5432"
+    volumes:
+      - brain_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d SecondBrainBrainDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  user-service:
+    container_name: second_brain_user_api
+    build:
+      context: .
+      dockerfile: src/SecondBrain.Services/SecondBrain.User/Dockerfile
+    ports:
+      - "7002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=users-db;Port=5432;Database=SecondBrainUsersDb;Username=postgres;Password=YourStrongPassword123!;
+    depends_on:
+      users-db:
+        condition: service_healthy
+
+  brain-service:
+    container_name: second_brain_brain_api
+    build:
+      context: .
+      dockerfile: src/SecondBrain.Services/SecondBrain.Brain/Dockerfile
+    ports:
+      - "7001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=brain-db;Port=5432;Database=SecondBrainBrainDb;Username=postgres;Password=YourStrongPassword123!;
+    depends_on:
+      brain-db:
+        condition: service_healthy
+  api-gateway:
+    container_name: second_brain_gateway
+    build:
+      context: .
+      dockerfile: src/SecondBrain.Gateway/Dockerfile
+    ports:
+      - "5000:8080" 
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - user-service
+      - brain-service
+volumes:
+  users_db_data:
+  brain_db_data:

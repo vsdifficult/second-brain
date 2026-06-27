@@ -16,7 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 builder.Services.AddDbContext<BrainDbContext>(options =>
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 builder.Services.AddScoped<BaseDbContext>(sp => sp.GetRequiredService<BrainDbContext>());
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<INoteBookRepository, NoteBookRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 
 builder.Services.AddScoped<IRepository<TagEntity, Guid>, GenericRepository<TagEntity, Guid>>();
+builder.Services.AddScoped<IRepository<NoteEntity, Guid>, GenericRepository<NoteEntity, Guid>>();
+builder.Services.AddScoped<IRepository<NoteBookEntity, Guid>, GenericRepository<NoteBookEntity, Guid>>();
 
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<INoteBookService, NoteBookService>();
@@ -94,7 +97,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", policy =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
-
+builder.Services.AddHttpLogging(logging =>
+{
+    logging.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.All;
+});
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -109,7 +115,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+app.UseHttpLogging();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
