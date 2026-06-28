@@ -1,5 +1,7 @@
-
 services:
+
+  # ── Databases ────────────────────────────────────────────────────────────────
+
   users-db:
     image: postgres:16-alpine
     container_name: second_brain_users_db
@@ -33,7 +35,75 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  
+
+  search-db:
+    image: postgres:16-alpine
+    container_name: second_brain_search_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrongPassword123!
+      - POSTGRES_DB=SecondBrainSearchDb
+    ports:
+      - "5434:5432"
+    volumes:
+      - search_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d SecondBrainSearchDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Kafka ────────────────────────────────────────────
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: second_brain_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: second_brain_kafka_init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notes.created  --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notes.updated  --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notes.deleted  --partitions 1 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notes.archived --partitions 1 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tags.added     --partitions 1 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic tags.removed   --partitions 1 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic system.dead-letter --partitions 1 --replication-factor 1
+      echo 'Topics created.'
+      "
+    restart: on-failure
+
+  # ── Services ─────────────────────────────────────────────────────────────────
+
   user-service:
     container_name: second_brain_user_api
     build:
@@ -43,7 +113,7 @@ services:
       - "7002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=users-db;Port=5432;Database=SecondBrainUsersDb;Username=postgres;Password=YourStrongPassword123!;
+      - ConnectionStrings__DefaultConnection=Host=users-db;Port=5432;Database=SecondBrainUsersDb;Username=postgres;Password=YourStrongPassword123!
     depends_on:
       users-db:
         condition: service_healthy
@@ -57,22 +127,54 @@ services:
       - "7001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=brain-db;Port=5432;Database=SecondBrainBrainDb;Username=postgres;Password=YourStrongPassword123!;
+      - ConnectionStrings__DefaultConnection=Host=brain-db;Port=5432;Database=SecondBrainBrainDb;Username=postgres;Password=YourStrongPassword123!
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=brain-service
+      - Kafka__ClientId=brain-producer
     depends_on:
       brain-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  search-service:
+    container_name: second_brain_search_api
+    build:
+      context: .
+      dockerfile: src/SecondBrain.Services/SecondBrain.Search/Dockerfile
+    ports:
+      - "7003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=search-db;Port=5432;Database=SecondBrainSearchDb;Username=postgres;Password=YourStrongPassword123!
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=search-service
+      - Kafka__ClientId=search-consumer
+    depends_on:
+      search-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
   api-gateway:
     container_name: second_brain_gateway
     build:
       context: .
       dockerfile: src/SecondBrain.Gateway/Dockerfile
     ports:
-      - "5000:8080" 
+      - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ReverseProxy__Clusters__brain-cluster__Destinations__brain__Address=http://brain-service:8080/
+      - ReverseProxy__Clusters__user-cluster__Destinations__user__Address=http://user-service:8080/
+      - ReverseProxy__Clusters__search-cluster__Destinations__search__Address=http://search-service:8080/
     depends_on:
       - user-service
       - brain-service
+      - search-service
+
 volumes:
   users_db_data:
   brain_db_data:
+  search_db_data:
+  kafka_data:
