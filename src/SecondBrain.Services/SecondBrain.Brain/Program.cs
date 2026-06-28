@@ -10,7 +10,11 @@ using SecondBrain.Services.BrainService.Services.Interfaces;
 using SecondBrain.Services.BrainService.Services.Implementations;
 using SecondBrain.BuildingBlocks.Core.Repositories;
 using SecondBrain.BuildingBlocks.EFCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL; 
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+using SecondBrain.BuildingBlocks.Infrastructure.Messaging.Options;
+using SecondBrain.BuildingBlocks.Messaging.Kafka.Producer;
+using SecondBrain.BuildingBlocks.Messaging.Kafka.Abstractions;
+using SecondBrain.BuildingBlocks.EFCore.Outbox;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -19,6 +23,9 @@ builder.Services.AddDbContext<BrainDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
+builder.Services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+builder.Services.AddSingleton<IEventBus, KafkaEventBus>();
+builder.Services.AddOutboxPublisher<BrainDbContext>();
 builder.Services.AddScoped<BaseDbContext>(sp => sp.GetRequiredService<BrainDbContext>());
 
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
