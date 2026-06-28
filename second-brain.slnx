@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/src/SecondBrain.Services/">
     <Project Path="src/SecondBrain.Services/SecondBrain.Brain/SecondBrain.Brain.csproj" />
+    <Project Path="src/SecondBrain.Services/SecondBrain.Search/SecondBrain.Search.csproj" />
     <Project Path="src/SecondBrain.Services/SecondBrain.User/SecondBrain.User.csproj" />
   </Folder>
   <Folder Name="/tests/">

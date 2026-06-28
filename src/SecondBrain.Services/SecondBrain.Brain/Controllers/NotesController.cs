@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecondBrain.Services.BrainService.Models;
@@ -33,12 +34,14 @@ public class NotesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] NoteCreateRequestDto dto, CancellationToken ct)
     {
-        try
-        {
-            var id = await _noteService.CreateNoteAsync(dto, ct);
-            return CreatedAtAction(nameof(Get), new { id }, new { id });
-        }
-        catch (ArgumentException ex) { return BadRequest(new { ex.Message }); }
+        var ownerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(ownerIdClaim, out var ownerId))
+            return Unauthorized();
+
+        dto.OwnerId = ownerId; 
+
+        var id = await _noteService.CreateNoteAsync(dto, ct);
+        return CreatedAtAction(nameof(Get), new { id }, new { id });
     }
 
     /// <summary>PUT /api/notes/{id}</summary>
